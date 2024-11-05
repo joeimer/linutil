@@ -140,7 +140,7 @@ echo -ne "
 set_password () {
     while true
     do
-        read -rs -p "Enter password for LUKS: " PASSWORD1
+        read -rs -p "Enter password: " PASSWORD1
         echo -ne "\n"
         read -rs -p "Please re-enter password: " PASSWORD2
         echo -ne "\n"
@@ -270,9 +270,9 @@ userinfo () {
     done
     export USERNAME=$username
 
-    set_password PASSWORD
+    set_password "PASSWORD"
 
-     # Loop through user input until the user gives a valid hostname, but allow the user to force save
+    # Loop through user input until the user gives a valid hostname, but allow the user to force save
     while true
     do
         read -r -p "Please name your machine: " name_of_machine
