@@ -134,6 +134,25 @@ echo -ne "
 ------------------------------------------------------------------------
 "
 }
+
+# @description ask user for password
+# @param1 - variable name
+set_password () {
+    while true
+    do
+        read -rs -p "Enter password for LUKS: " PASSWORD1
+        echo -ne "\n"
+        read -rs -p "Please re-enter password: " PASSWORD2
+        echo -ne "\n"
+        if [[ "$PASSWORD1" == "$PASSWORD2" ]]; then
+            eval "$1='$PASSWORD1'"
+            break
+        else
+            echo -ne "ERROR! Passwords do not match. \n"
+        fi
+    does
+}
+
 # @description This function will handle file systems. At this movement we are handling only
 # btrfs and ext4. Others will be added in future.
 filesystem () {
@@ -178,6 +197,7 @@ timezone () {
         *) echo "Wrong option. Try again";timezone;;
     esac
 }
+
 # @description Set user's keyboard mapping.
 keymap () {
     echo -ne "
@@ -241,44 +261,32 @@ userinfo () {
     # Loop through user input until the user gives a valid username
     while true
     do
-            read -r -p "Please enter username: " username
-            if [[ "${username,,}" =~ ^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$ ]]
-            then
-                    break
-            fi
-            echo "Incorrect username."
+        read -r -p "Please enter username: " username
+        if [[ "${username,,}" =~ ^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$ ]]
+        then
+            break
+        fi
+        echo "Incorrect username."
     done
     export USERNAME=$username
 
-    while true
-    do
-        read -rs -p "Please enter password: " PASSWORD1
-        echo -ne "\n"
-        read -rs -p "Please re-enter password: " PASSWORD2
-        echo -ne "\n"
-        if [[ "$PASSWORD1" == "$PASSWORD2" ]]; then
-            break
-        else
-            echo -ne "ERROR! Passwords do not match. \n"
-        fi
-    done
-    export PASSWORD=$PASSWORD1
+    set_password PASSWORD
 
      # Loop through user input until the user gives a valid hostname, but allow the user to force save
     while true
     do
-            read -r -p "Please name your machine: " name_of_machine
-            # hostname regex (!!couldn't find spec for computer name!!)
-            if [[ "${name_of_machine,,}" =~ ^[a-z][a-z0-9_.-]{0,62}[a-z0-9]$ ]]
-            then
-                    break
-            fi
-            # if validation fails allow the user to force saving of the hostname
-            read -r -p "Hostname doesn't seem correct. Do you still want to save it? (y/n)" force
-            if [[ "${force,,}" = "y" ]]
-            then
-                    break
-            fi
+        read -r -p "Please name your machine: " name_of_machine
+        # hostname regex (!!couldn't find spec for computer name!!)
+        if [[ "${name_of_machine,,}" =~ ^[a-z][a-z0-9_.-]{0,62}[a-z0-9]$ ]]
+        then
+            break
+        fi
+        # if validation fails allow the user to force saving of the hostname
+        read -r -p "Hostname doesn't seem correct. Do you still want to save it? (y/n)" force
+        if [[ "${force,,}" = "y" ]]
+        then
+            break
+        fi
     done
     export NAME_OF_MACHINE=$name_of_machine
 }
