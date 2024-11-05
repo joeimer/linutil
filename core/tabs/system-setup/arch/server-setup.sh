@@ -402,15 +402,15 @@ elif [[ "${FS}" == "ext4" ]]; then
     mkfs.ext4 "${partition3}"
     mount -t ext4 "${partition3}" /mnt
 elif [[ "${FS}" == "luks" ]]; then
-    mkfs.vfat -F32 "${partition2}"
+    mkfs.vfat -F32 -n "EFIBOOT" "${partition2}"
 # enter luks password to cryptsetup and format root partition
-    echo -n "${LUKS_PASSWORD}" | cryptsetup -y -v luksFormat "${partition3}" -
+    echo -n "${LUKS_PASSWORD}" | cryptsetup -v luksFormat "${partition3}" -
 # open luks container and ROOT will be place holder
     echo -n "${LUKS_PASSWORD}" | cryptsetup open "${partition3}" ROOT -
 # now format that container
-    mkfs.btrfs "${partition3}"
+    mkfs.btrfs /dev/mapper/ROOT
 # create subvolumes for btrfs
-    mount -t btrfs "${partition3}" /mnt
+    mount -t btrfs /dev/mapper/ROOT /mnt
     subvolumesetup
     ENCRYPTED_PARTITION_UUID=$(blkid -s UUID -o value "${partition3}")
 fi
