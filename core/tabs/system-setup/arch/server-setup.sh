@@ -136,7 +136,7 @@ echo -ne "
 }
 
 # @description ask user for password
-# @param1 - variable name
+# @param1 - variable for export
 set_password () {
     while true
     do
@@ -150,7 +150,7 @@ set_password () {
         else
             echo -ne "ERROR! Passwords do not match. \n"
         fi
-    does
+    done
 }
 
 # @description This function will handle file systems. At this movement we are handling only
