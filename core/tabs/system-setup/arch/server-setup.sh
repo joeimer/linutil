@@ -367,7 +367,7 @@ createsubvolumes () {
 
 # @description Mount all btrfs subvolumes after root has been mounted.
 mountallsubvol () {
-    mount -o "${MOUNT_OPTIONS}",subvol=@home "${partition3}" /mnt/home
+    mount -o "${MOUNT_OPTIONS}",subvol=@home $1 /mnt/home
 }
 
 # @description BTRFS subvolulme creation and mounting.
@@ -377,11 +377,11 @@ subvolumesetup () {
 # unmount root to remount with subvolume
     umount /mnt
 # mount @ subvolume
-    mount -o "${MOUNT_OPTIONS}",subvol=@ "${partition3}" /mnt
+    mount -o "${MOUNT_OPTIONS}",subvol=@ $1 /mnt
 # make directories home, .snapshots, var, tmp
     mkdir -p /mnt/home
 # mount subvolumes
-    mountallsubvol
+    mountallsubvol $1
 }
 
 if [[ "${DISK}" =~ "nvme" ]]; then
@@ -396,7 +396,7 @@ if [[ "${FS}" == "btrfs" ]]; then
     mkfs.vfat -F32 -n "EFIBOOT" "${partition2}"
     mkfs.btrfs -f "${partition3}"
     mount -t btrfs "${partition3}" /mnt
-    subvolumesetup
+    subvolumesetup "${partition3}"
 elif [[ "${FS}" == "ext4" ]]; then
     mkfs.vfat -F32 -n "EFIBOOT" "${partition2}"
     mkfs.ext4 "${partition3}"
@@ -411,7 +411,7 @@ elif [[ "${FS}" == "luks" ]]; then
     mkfs.btrfs /dev/mapper/ROOT
 # create subvolumes for btrfs
     mount -t btrfs /dev/mapper/ROOT /mnt
-    subvolumesetup
+    subvolumesetup "/dev/mapper/ROOT"
     ENCRYPTED_PARTITION_UUID=$(blkid -s UUID -o value "${partition3}")
 fi
 
