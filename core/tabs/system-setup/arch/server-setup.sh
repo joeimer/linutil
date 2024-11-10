@@ -134,6 +134,7 @@ echo -ne "
 ------------------------------------------------------------------------
 "
 }
+
 # @description This function will handle file systems. At this movement we are handling only
 # btrfs and ext4. Others will be added in future.
 filesystem () {
@@ -147,7 +148,19 @@ filesystem () {
     0) export FS=btrfs;;
     1) export FS=ext4;;
     2)
-        set_password "LUKS_PASSWORD"
+        while true
+        do
+            read -rs -p "Please enter password: " LUKS_PASSWORD1
+            echo -ne "\n"
+            read -rs -p "Please re-enter password: " LUKS_PASSWORD2
+            echo -ne "\n"
+            if [[ "$LUKS_PASSWORD1" == "$LUKS_PASSWORD2" ]]; then
+                break
+            else
+                echo -ne "ERROR! Passwords do not match. \n"
+            fi
+        done
+        export LUKS_PASSWORD=$LUKS_PASSWORD1
         export FS=luks
         ;;
     3) exit ;;
@@ -178,6 +191,7 @@ timezone () {
         *) echo "Wrong option. Try again";timezone;;
     esac
 }
+
 # @description Set user's keyboard mapping.
 keymap () {
     echo -ne "
@@ -241,12 +255,12 @@ userinfo () {
     # Loop through user input until the user gives a valid username
     while true
     do
-            read -r -p "Please enter username: " username
-            if [[ "${username,,}" =~ ^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$ ]]
-            then
-                    break
-            fi
-            echo "Incorrect username."
+        read -r -p "Please enter username: " username
+        if [[ "${username,,}" =~ ^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$ ]]
+        then
+            break
+        fi
+        echo "Incorrect username."
     done
     export USERNAME=$username
 
@@ -264,21 +278,21 @@ userinfo () {
     done
     export PASSWORD=$PASSWORD1
 
-     # Loop through user input until the user gives a valid hostname, but allow the user to force save
+    # Loop through user input until the user gives a valid hostname, but allow the user to force save
     while true
     do
-            read -r -p "Please name your machine: " name_of_machine
-            # hostname regex (!!couldn't find spec for computer name!!)
-            if [[ "${name_of_machine,,}" =~ ^[a-z][a-z0-9_.-]{0,62}[a-z0-9]$ ]]
-            then
-                    break
-            fi
-            # if validation fails allow the user to force saving of the hostname
-            read -r -p "Hostname doesn't seem correct. Do you still want to save it? (y/n)" force
-            if [[ "${force,,}" = "y" ]]
-            then
-                    break
-            fi
+        read -r -p "Please name your machine: " name_of_machine
+        # hostname regex (!!couldn't find spec for computer name!!)
+        if [[ "${name_of_machine,,}" =~ ^[a-z][a-z0-9_.-]{0,62}[a-z0-9]$ ]]
+        then
+            break
+        fi
+        # if validation fails allow the user to force saving of the hostname
+        read -r -p "Hostname doesn't seem correct. Do you still want to save it? (y/n)" force
+        if [[ "${force,,}" = "y" ]]
+        then
+            break
+        fi
     done
     export NAME_OF_MACHINE=$name_of_machine
 }
@@ -359,7 +373,7 @@ createsubvolumes () {
 
 # @description Mount all btrfs subvolumes after root has been mounted.
 mountallsubvol () {
-    mount -o "${MOUNT_OPTIONS}",subvol=@home "${partition3}" /mnt/home
+    mount -o "${MOUNT_OPTIONS}",subvol=@home $1 /mnt/home
 }
 
 # @description BTRFS subvolulme creation and mounting.
@@ -369,11 +383,11 @@ subvolumesetup () {
 # unmount root to remount with subvolume
     umount /mnt
 # mount @ subvolume
-    mount -o "${MOUNT_OPTIONS}",subvol=@ "${partition3}" /mnt
+    mount -o "${MOUNT_OPTIONS}",subvol=@ $1 /mnt
 # make directories home, .snapshots, var, tmp
     mkdir -p /mnt/home
 # mount subvolumes
-    mountallsubvol
+    mountallsubvol $1
 }
 
 if [[ "${DISK}" =~ "nvme" ]]; then
@@ -388,22 +402,22 @@ if [[ "${FS}" == "btrfs" ]]; then
     mkfs.vfat -F32 -n "EFIBOOT" "${partition2}"
     mkfs.btrfs -f "${partition3}"
     mount -t btrfs "${partition3}" /mnt
-    subvolumesetup
+    subvolumesetup "${partition3}"
 elif [[ "${FS}" == "ext4" ]]; then
     mkfs.vfat -F32 -n "EFIBOOT" "${partition2}"
     mkfs.ext4 "${partition3}"
     mount -t ext4 "${partition3}" /mnt
 elif [[ "${FS}" == "luks" ]]; then
-    mkfs.vfat -F32 "${partition2}"
+    mkfs.vfat -F32 -n "EFIBOOT" "${partition2}"
 # enter luks password to cryptsetup and format root partition
     echo -n "${LUKS_PASSWORD}" | cryptsetup -y -v luksFormat "${partition3}" -
 # open luks container and ROOT will be place holder
     echo -n "${LUKS_PASSWORD}" | cryptsetup open "${partition3}" ROOT -
 # now format that container
-    mkfs.btrfs "${partition3}"
+    mkfs.btrfs /dev/mapper/ROOT
 # create subvolumes for btrfs
-    mount -t btrfs "${partition3}" /mnt
-    subvolumesetup
+    mount -t btrfs /dev/mapper/ROOT /mnt
+    subvolumesetup "/dev/mapper/ROOT"
     ENCRYPTED_PARTITION_UUID=$(blkid -s UUID -o value "${partition3}")
 fi
 
